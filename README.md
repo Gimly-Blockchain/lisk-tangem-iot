@@ -15,27 +15,33 @@ During the shipping, the temperature at some point rises to 5°C. When package A
 * Tangem android SDK for implementing tangem commands and interactions: https://github.com/Gimly-Blockchain/tangem-sdk-android.   
 * Tangem core JVM library for implementing Tangem commands and interaction on JVM, other than android: https://github.com/Gimly-Blockchain/tangem-sdk-android/tree/master/tangem-core.   
 
-## Plan
-The project will be divided in several smaller PoCs
-### 1. First PoC: signing lisk transactions with tangem card
+## PoC 1: object and recipient co-sign custom GPS transaction
+The project will be divided in several smaller steps
+### 1. Signing lisk transactions with tangem card
 1. MfB NFC chips: Connect tangem dev. cards to Lisk
 1.1 Personalise card; generate new ED25519 pub/priv key pair. 
 1.2 Generate lisk account using new pub key.
-2. Lisk wallet to sign transactions: native android, or webapp to demonstrate functional NFC cards
+2. Implement Tangem functionality in Lisk wallet to sign transactions: native android, or webapp to demonstrate functional NFC cards
 
-### 2. Second PoC: multi-sig transaction in supply chain
-An object carrying a tangem MfB NFC chip is shipped to recipient. Upon receipt of the object, the recipient scans the object NFC iwht phone running Lisk Tangem wallet, and both the object and recipient co-sign a multi-signature transaction to confirm physical presence of object with recipient.
+### 2. Lisk sidechain: multi-sig transaction in supply chain
+An object carrying a tangem MfB NFC chip is shipped to recipient. Upon receipt of the object, the recipient scans the object NFC iwht phone running Lisk Tangem wallet, and both the object and recipient co-sign a custom transaction that includes the device's GPS data to confirm physical presence of object with recipient (regardless of the accuracy of the GPS data - both object and recipient must physically be with the mobile device at the same time).
 2.1. Implement multi-sig functionality in Lisk wallet with Tangem functionalities
 2.2. Scanning the object should trigger the multisig request
-2.3. multi sig signed both by object and recipient
+2.3. Custom transaction includes GPS data from mobile device
+2.3. Custom transaction signed both by object and recipient private keys
 
-### 3. Third PoC: include writing data to NFC chip and log in lisk transaction
+## PoC 2: Data read/write to NFC included in custom transaction
 
-### 4. Fourth PoC: include data from connected IoT device 
+### 1. Write/read data to NFC
+1. Write data: this object may only be received by recipient with pubkey X
+2. Upon receipt, mobile device scans NFC, reads data, extracts rightful recipient's pubkey X
+3. Mobile application requests recipient to proves ownership of pubkey X through challenge response
+4. Multi sig custom transactions with GPS data (PoC 1) is completed.
 
-### 5. Fifth PoC: let the application run directly from IoT device rather than mobile device.
-* Implement Tangem JVM core commands and interactions in IoT application and client / UI application.
-* Ensure that the signing of the transactions is not done by the package account with passphrase, but instead is done by the MfB NFC chip. Note: the private key from this chip cannot be extracted, so the pub/priv pair connot simply be used to generate new package account.
-* All temperature data must be stored securely, and anchored in blockchain. When scanning the boxes at exit, client app must validate temperature (stored in cloud, or on IoT sensor's NFC chip) data in blockchain, and check the max temperatures for each box against this temperature data.
+## PoC 3: run PoC 1 and 2 on IoT device, include temperature data
+IoT device with BLE + NFC measures temperature during transport, signs custom transactions logging temperature data
+Write the desire 
+Upon boarding a package, mobile device scans package's NFC
+All temperature data must be stored securely, and anchored in blockchain. When scanning the boxes at exit, client app must validate temperature (stored in cloud, or on IoT sensor's NFC chip) data in blockchain, and check the max temperatures for each box against this temperature data.
 
 
