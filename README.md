@@ -11,7 +11,7 @@ During the shipping, the temperature at some point rises to 5°C. When package A
 ## Resources
 * Project introduction: https://www.gimly.io/blog/physical-digital-nexus.  
 * Tangem's made-for-blockchain NFC tech: https://www.gimly.io/tangem.
-* Tangem Cordoba SDK: https://github.com/Gimly-Blockchain/tangem-sdk-cordova
+* Tangem Cordova SDK: https://github.com/Gimly-Blockchain/tangem-sdk-cordova
 * Tangem android SDK for implementing tangem commands and interactions: https://github.com/Gimly-Blockchain/tangem-sdk-android.   
 * Tangem core JVM library for implementing Tangem commands and interaction on JVM, other than android: https://github.com/Gimly-Blockchain/tangem-sdk-android/tree/master/tangem-core.   
 * Lisk SDK setup: https://github.com/LiskHQ/lisk-sdk
