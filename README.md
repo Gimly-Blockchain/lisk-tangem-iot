@@ -10,10 +10,13 @@ During the shipping, the temperature at some point rises to 5°C. When package A
 
 ## Resources
 * Project introduction: https://www.gimly.io/blog/physical-digital-nexus.  
-* Tangem's made-for-blockchain NFC tech: https://www.gimly.io/tangem.  
-* Lisk SDK Supply Chain: https://github.com/LiskHQ/lisk-sdk-examples/tree/development/transport
+* Tangem's made-for-blockchain NFC tech: https://www.gimly.io/tangem.
+* Tangem Cordoba SDK: https://github.com/Gimly-Blockchain/tangem-sdk-cordova
 * Tangem android SDK for implementing tangem commands and interactions: https://github.com/Gimly-Blockchain/tangem-sdk-android.   
 * Tangem core JVM library for implementing Tangem commands and interaction on JVM, other than android: https://github.com/Gimly-Blockchain/tangem-sdk-android/tree/master/tangem-core.   
+* Lisk SDK setup: https://github.com/LiskHQ/lisk-sdk
+* Lisk SDK Supply Chain example: https://github.com/LiskHQ/lisk-sdk-examples/tree/development/transport
+
 
 ## PoC 1: object and recipient co-sign custom GPS transaction
 The project will be divided in several smaller steps
