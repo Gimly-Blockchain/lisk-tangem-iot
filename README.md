@@ -26,12 +26,13 @@ The project will be divided in several smaller steps
 1.2 Generate lisk account using new pub key.
 2. Implement Tangem functionality in Lisk wallet to sign transactions: native android, or webapp to demonstrate functional NFC cards
 
-### 2. Lisk sidechain: multi-sig transaction in supply chain
-An object carrying a tangem MfB NFC chip is shipped to recipient. Upon receipt of the object, the recipient scans the object NFC iwht phone running Lisk Tangem wallet, and both the object and recipient co-sign a custom transaction that includes the device's GPS data to confirm physical presence of object with recipient (regardless of the accuracy of the GPS data - both object and recipient must physically be with the mobile device at the same time).
-2.1. Implement multi-sig functionality in Lisk wallet with Tangem functionalities
-2.2. Scanning the object should trigger the multisig request
-2.3. Custom transaction includes GPS data from mobile device
-2.3. Custom transaction signed both by object and recipient private keys
+### 2. Lisk Supplychain App: recipient, package, and shipper must co-sign custom transaction for succesful delivery
+* The recipient has a Lisk Supplychain Account with pub/priv key pair, and has downloaded the Lisk Supplychain App. Recipient orders a package through the app. 
+* A package carrying a tangem MfB NFC chip, containing its own pub/priv key pair is shipped to recipient.
+* The package is delivered by an authorized shipper, that carries a Tangem NFC card as identifying card, with its own pub/priv key pair. 
+* Upon delivery of the package, the recipient scans the object NFC with a mobile device running Lisk Supplychain App
+* The app requests signatures from the recipient, from the package, and from the shipper to sign a custom transaction
+* Three signatures are required to confirm correct receipt of package: from the recipient, from the package NFC chip, and from the shippers NFC card ID.
 
 ## PoC 2: Data read/write to NFC included in custom transaction
 
