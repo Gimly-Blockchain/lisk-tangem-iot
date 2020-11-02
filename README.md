@@ -1,12 +1,5 @@
 ## Introduction
-This made-for-blockchain IoT supply chain PoC is funded through the Lisk builders program. It aims to combine Tangem made-for-blockchain NFC chips and the Lisk SDK supply chain solution to connect physical goods to digital blockchains in a supplychain solution.
-
-### Use case
-The solution will track temperature in a shipping container that holds two packages A and B carrying mfb NFC chips, and that have different temperature requirements. Package A can be stored at max 6°C and Package B at max 4°C. 
-
-The shipping container holds a secure IoT temperature sensor, that contains a mfb NFC chip itself. This chip is used for signing any transactions on behalve of the IoT sensor, and possibly also for storing temperature data.
-
-During the shipping, the temperature at some point rises to 5°C. When package A and B are scanned upon arrival, package A should get a green flag (temp stayed below 6°C) while package B should get a red flag (temperature rose above 5°C).
+This made-for-blockchain IoT supply chain PoC is funded through the Lisk builders program. It aims to combine Tangem made-for-blockchain NFC chips and the Lisk SDK supply chain solution to connect physical goods to digital blockchains in a supplychain solution. The purpose of the pilot is to demonstrate how the Tangem by Gimly NFC chips can function as an HSM capable of securely signing Lisk custom transactions, thereby securely connecting physical objects to lisk transactions.
 
 ## Resources
 * Project introduction: https://www.gimly.io/blog/physical-digital-nexus.  
@@ -18,34 +11,35 @@ During the shipping, the temperature at some point rises to 5°C. When package A
 * Lisk SDK Supply Chain example: https://github.com/LiskHQ/lisk-sdk-examples/tree/development/transport
 
 
-## PoC 1: object and recipient co-sign custom GPS transaction
+## PoC object signs its own custom transaction instead of the Pi
 The project will be divided in several smaller steps
+
 ### 1. Signing lisk transactions with tangem card
 1. MfB NFC chips: Connect tangem dev. cards to Lisk
 1.1 Personalise card; generate new ED25519 pub/priv key pair. 
 1.2 Generate lisk account using new pub key.
 2. Implement Tangem functionality in Lisk wallet to sign transactions: native android, or webapp to demonstrate functional NFC cards
 
-### 2. Lisk Supplychain App: recipient, package, and shipper must co-sign custom transaction for succesful delivery
-* The recipient has a Lisk Supplychain Account with pub/priv key pair, and has downloaded the Lisk Supplychain App. Recipient orders a package through the app. 
-* A package carrying a tangem MfB NFC chip, containing its own pub/priv key pair is shipped to recipient.
-* The package is delivered by an authorized shipper, that carries a Tangem NFC card as identifying card, with its own pub/priv key pair. 
-* Upon delivery of the package, the recipient scans the object NFC with a mobile device running Lisk Supplychain App
-* The app requests signatures from the recipient, from the package, and from the shipper to sign a custom transaction
-* Three signatures are required to confirm correct receipt of package: from the recipient, from the package NFC chip, and from the shippers NFC card ID.
+### 2. Allow IoT device to interact with Tangem NFC 
+* Uses the https://github.com/pokusew/nfc-pcsc node npm library for reading smart cards using the ACR-ACS1525 reader
+* Uses its own (partial) implementation of the tangem protocol to communicate with the smartcard (non-encrypted mode). These are implemented in tangem/tangemcard.js.
+* Based on the LightAlarmTransaction application, for now setup for development on laptop (raspberry hardware interface / pin IO commented out) -> Will be re-enabled when moved to raspberry pi
+* In index.js, the NFC communication is setup with a call to initReader (implemented in nfc-reader.js)
+* This call sets up a global NFC object (using the nfc-pcsc library) that has event handlers for:
+  * Reader detected event
+  * Card detected event 
+  *	Error event
+  * Reader removed event
+* In the card detected event handler, a readCard function is called that decodes card information from the tangem card.
 
-## PoC 2: Data read/write to NFC included in custom transaction
+### Current status of the project
+* Tangem by Gimly cards are connected to Lisk blockchain
+  * A wallet in the card is created upon personalisation of Tangem card, using ed25519 curve.
+* “Readcard” function partially implemented in IoT device
 
-### 1. Write/read data to NFC
-1. Write data: this object may only be received by recipient with pubkey X
-2. Upon receipt, mobile device scans NFC, reads data, extracts rightful recipient's pubkey X
-3. Mobile application requests recipient to proves ownership of pubkey X through challenge response
-4. Multi sig custom transactions with GPS data (PoC 1) is completed.
-
-## PoC 3: run PoC 1 and 2 on IoT device, include temperature data
-IoT device with BLE + NFC measures temperature during transport, signs custom transactions logging temperature data
-Write the desire 
-Upon boarding a package, mobile device scans package's NFC
-All temperature data must be stored securely, and anchored in blockchain. When scanning the boxes at exit, client app must validate temperature (stored in cloud, or on IoT sensor's NFC chip) data in blockchain, and check the max temperatures for each box against this temperature data.
-
-
+### Next steps: 
+* decode card UID from the TLV record that is returned by readcard command
+* Implement request wallet public key command in tangem library
+* Implement sign transaction command in tangem library
+* Create lisk transaction, replace sign transaction (index.js#55) with card based signing
+* Test on raspberry pi
