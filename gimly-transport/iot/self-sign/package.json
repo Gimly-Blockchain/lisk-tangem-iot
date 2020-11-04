@@ -15,7 +15,6 @@
     "@liskhq/lisk-transactions": "^3.0.1",
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.7.0",
-    "crypto-js": "^4.0.0",
     "install": "^0.13.0",
     "nfc-pcsc": "^0.8.0",
     "npm": "^6.14.8"

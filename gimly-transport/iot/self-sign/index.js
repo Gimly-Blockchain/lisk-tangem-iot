@@ -4,10 +4,12 @@
 // GPIO.setPin(4, PIN.MODE.INPUT);
 // GPIO.pullControl(4, PIN.MODE.PULL_UP);
 
+import * as cryptography from '@liskhq/lisk-cryptography';
+
 const LightAlarmTransaction = require('./light-alarm.js');
 const { APIClient } = require('@liskhq/lisk-api-client');
 const {getNetworkIdentifier} = require('@liskhq/lisk-cryptography');
-const { initReader } = require('./nfc-reader');
+const { initReader, getReader, getActivecardData, signMessageUsingActiveCard } = require('./nfc-reader');
 
 const networkIdentifier = getNetworkIdentifier(
 	"23ce0366ef0a14a91e5fd4b1591fc880ffbef9d988ff8bebf8f3666b0c09597d",
@@ -37,33 +39,60 @@ const packetCredentials = {
   "privateKey": "7175ea715dad8971217619d39b95fc79cd0186b7295f0572a8ee787cfe3dfbc93e0373be705cb2c9a2ef533ed2ceaf36c5ec8c5f60668b3b2650a3ef6260a83d"
 }
 
-setInterval(() => {
-	// let state = GPIO.read(4);
-	let state = 1;
-	
-	// console.log("got state %s / %s", new Date(), state)
-	if(state === 0) {
-		console.log('Package has been opened! Send lisk transaction!');
-		// Uncomment the below code in step 1.3 of the workshop
-        let tx =  new LightAlarmTransaction({
-            timestamp: dateToLiskEpochTimestamp(new Date()),
-            networkIdentifier: networkIdentifier
-        });
-				
-				console.log(tx);
-				
-        tx.sign(packetCredentials.passphrase);
-				
-        api.transactions.broadcast(tx.toJSON()).then(res => {
-            console.log("++++++++++++++++ API Response +++++++++++++++++");
-            console.log(res.data);
-            console.log("++++++++++++++++ Transaction Payload +++++++++++++++++");
-            console.log(tx.stringify());
-            console.log("++++++++++++++++ End Script +++++++++++++++++");
-        }).catch(err => {
-            console.dir(err);
-        });
-	} else {
-		// console.log('Alles gut');
+const checkState = () => {
+	try {
+		// let state = GPIO.read(4);
+		let state = 1;
+		
+		// console.log("got state %s / %s", new Date(), state)
+		if(state === 1) {
+			console.log('Package has been opened! Send lisk transaction!');
+			// Uncomment the below code in step 1.3 of the workshop
+					
+					let reader = getReader();
+					if(false!==reader) {
+						let activeCardData = getActivecardData()
+						let pubkey = activeCardData.WalletPublicKey;
+						console.log("wallet public address is %s", pubkey.toString('hex'));
+						let credentials = {
+							"address": cryptography.getAddressFromPublicKey(pubkey),
+						}
+						
+						// https://lisk.io/documentation/lisk-sdk/references/lisk-elements/cryptography.html#_getaddressfrompublickey
+						
+						
+						console.log("lisk address is %s", credentials.address);
+						
+						// let tx = new LightAlarmTransaction({
+		        //     timestamp: dateToLiskEpochTimestamp(new Date()),
+		        //     networkIdentifier: networkIdentifier
+		        // });
+						// const message = Buffer.from(tx);
+						const message = "hello";
+						signMessageUsingActiveCard(message);
+						
+						
+						// console.log(tx);
+		        // tx.sign(packetCredentials.passphrase);
+					}
+					
+	        // api.transactions.broadcast(tx.toJSON()).then(res => {
+	        //     console.log("++++++++++++++++ API Response +++++++++++++++++");
+	        //     console.log(res.data);
+	        //     console.log("++++++++++++++++ Transaction Payload +++++++++++++++++");
+	        //     console.log(tx.stringify());
+	        //     console.log("++++++++++++++++ End Script +++++++++++++++++");
+	        // }).catch(err => {
+	        //     console.dir(err);
+	        // });
+		} else {
+			console.log('Alles gut');
+		}
+	} catch(ex) {
+		console.error("checkstate error - %s", ex.message);
+	} finally {
+		setTimeout(checkState, 5000);
 	}
-}, 1000);
+}
+
+setTimeout(checkState, 1000);

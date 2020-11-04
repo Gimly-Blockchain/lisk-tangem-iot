@@ -1,12 +1,6 @@
+import crypto from 'crypto';
+
 // for now , only unencrypted communication with the card is supported
-
-const getHash = (value) => {
-  const CryptoJS = require('crypto-js');
-
-  console.log("hash value %o", value)
-  let hash = CryptoJS.SHA256(value);
-  return Buffer.from(hash.toString(CryptoJS.enc.Hex), 'hex');
-}
 
 const getTlvValueType = (tlvTagName) => {
   let tlvValueType = 'ByteArray';
@@ -14,6 +8,7 @@ const getTlvValueType = (tlvTagName) => {
     case 'CardId':
     case 'Batch':
     case 'CrExKey ':
+    case 'IssuerDataPublicKey':
       tlvValueType = 'HexString'; break;
     case 'ManufactureId':
     case 'Firmware':
@@ -27,11 +22,11 @@ const getTlvValueType = (tlvTagName) => {
     case 'PauseBeforePin2':
     case 'RemainingSignatures':
     case 'SignedHashes':
-    case 'Health':
     case 'TokenDecimal':
     case 'Offset':
     case 'Size':
       tlvValueType = 'Uint16'; break;
+    case 'Health':
     case 'FileIndex':
       tlvValueType = 'Uint8'; break;
     case 'MaxSignatures':
@@ -155,49 +150,56 @@ const getTlvTagName = (tlvCode) => {
   return tlvTagName;
 }
 
-const decodeTlvValue = (tlvValueType, data) => {
-  let result=data;
+const decodeTlvValue = (tlvValueType, data, tagName = "") => {
+  let result='';
+  // console.log("decodeTlvValue: %s - %s (%s) | %o", tagName, tlvValueType, data.length, data);
   switch(tlvValueType) {
     case 'HexString':
-      result=data; break;
-    case 'HexStringToHash':
+      result=data.toString('hex').toUpperCase(); break;
+    // case 'HexStringToHash':
+    //   result=data; break;
+    case 'ByteArray':
       result=data; break;
     case 'Utf8String':
       result=data.toString('utf8'); break;
-    case 'Uint8':
-      result=data; break;
-    case 'Uint16':
-      result=data; break;
-    case 'Uint32':
-      result=data; break;
-    case 'BoolValue':
-      result=data; break;
-    case 'ByteArray':
-      result=data; break;
-    case 'EllipticCurve':
-      result=data; break;
-    case 'DateTime':
-      result=data; break;
-    case 'ProductMask':
-      result=data; break;
-    case 'SettingsMask':
-      result=data; break;
     case 'CardStatus':
-      result=data; break;
     case 'SigningMethod':
-      result=data; break;
-    case 'IssuerDataMode':
-      result=data; break;
-    case 'FileDataMode':
-      result=data; break;
-    case 'FileSettings':
-      result=data; break;
+    case 'Uint8':
+      result=data.readUInt8(); break;
+    case 'Uint16':
+      result=data.readUInt16BE(); break;
+    case 'SettingsMask':
+    case 'Uint32':
+      result=data.readUInt32BE(); break;
+    case 'BoolValue':
+      result=data!==0; break;
+    //   result=data; break;
+    case 'EllipticCurve':
+    //   result=data; break;
+      result=data.toString('utf8'); break;
+    // case 'DateTime':
+    //   result=data; break;
+    // case 'ProductMask':
+    //   result=data; break;
+    //   result=data; break;
+    // case 'SigningMethod':
+    //   result=data; break;
+    // case 'IssuerDataMode':
+    //   result=data; break;
+    // case 'FileDataMode':
+    //   result=data; break;
+    // case 'FileSettings':
+    //   result=data; break;
   }
   
+  // if(result==='') {
+  //  console.log("decodeTlvValue: %s - %s (%s) | %o -> %s", tagName, tlvValueType, data.length, data, result);
+  // }
   return result;
 }
 
 const decodeTLV = (data) => {
+  let tlvData = {};
   let offset = 0;
   while(offset<data.length-2) { // last 2 bytes are status
     let code = data[offset++];
@@ -210,21 +212,28 @@ const decodeTLV = (data) => {
     let tagName = getTlvTagName(code);
     let valueType = getTlvValueType(tagName);
     let tmpbuffer = Buffer.allocUnsafe(length);
-    data.copy(tmpbuffer, offset, 0, length);
-    let value = decodeTlvValue(valueType, tmpbuffer);
-    console.log("decodeTLV from %s - id %s / %s (length %s) - %s", offset, tagName, valueType, length, JSON.stringify(value));
+    data.copy(tmpbuffer, 0, offset, offset + length);
+    // console.log("decode next tlv %s @ %s [%s bytes] -> %o", code, offset, length, tmpbuffer)
+    let value = decodeTlvValue(valueType, tmpbuffer, tagName);
+//    console.log("decodeTLV from %s - id %s / %s (length %s) - %s", offset, tagName, valueType, length, JSON.stringify(value));
     
     offset+=length;
+    tlvData[tagName]= value;
   }
+  
+  return tlvData;
 }
 
 export const readCard = async (reader) => {
   try {
-    let hash = getHash('000000')
+    let hash = crypto
+       .createHash('sha256')
+       .update(Buffer.from('000000'))
+       .digest();
     
     let tlv = Buffer.from([0x10, hash.length]);
     tlv = Buffer.concat([tlv, hash]);
-    console.log("got tlv: %o", tlv, tlv.length)
+    // console.log("got tlv: %o", tlv, tlv.length)
 
     let base = Buffer.from([
         0x00, // Class
@@ -236,7 +245,7 @@ export const readCard = async (reader) => {
       
     let request = Buffer.concat([base, tlv]);
     let response = await reader.transmit(request, 2048);
-    console.log("get readCard response %s", JSON.stringify(response))
+    // console.log("get readCard response %s", JSON.stringify(response))
     
     let sw1  = response[response.length - 2]
     let sw2  = response[response.length - 1]
@@ -246,12 +255,80 @@ export const readCard = async (reader) => {
     if(sw===0x9000) {
       console.log("card_read OK")
       
-      decodeTLV(response, 18)
+      // console.log("got data %o", response)
       
+      let data = decodeTLV(response)
+      return data;
+      // console.log("read card data: %o", data);
     } else {
       console.log("card_read ERROR")
+      return false;
     }
   } catch (err) {
     console.error('get_version error', err);
+    return false;
   }
 }
+
+
+const leftPad = (val, size, ch) => {
+  var result = String(val);
+  if (!ch) {
+    ch = ' ';
+  }
+  while (result.length < size) {
+    result = ch + result;
+  }
+  return result;
+};
+
+export const signMessageRaw = async (
+  reader,
+  message,
+  cid = 'BB03000000000004',
+  pin1 = '000000',
+  pin2 = '000'
+) => {
+  console.log("sign %s", message)
+  // 91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203
+  const pin1Hex = crypto
+    .createHash('sha256')
+    .update(Buffer.from(pin1))
+    .digest('hex');
+
+  // 2AC9A6746ACA543AF8DFF39894CFE8173AFBA21EB01C6FAE33D52947222855EF
+  const pin2Hex = crypto
+    .createHash('sha256')
+    .update(Buffer.from(pin2))
+    .digest('hex');
+
+  let messageLengthHex = leftPad((message.length / 2).toString(16), 4, '0');
+  let Lc = leftPad((85 + message.length / 2).toString(16), 6, '0');
+  let messageLengthHexNoPad = leftPad(
+    (message.length / 2).toString(16),
+    2,
+    '0'
+  );
+
+  const packetString = [
+    '00', // CLA
+    'FB', // INS
+    '00', // P1
+    '00', // P2
+    Lc, // Lc
+    '0108' + cid,
+    '1020' + pin1Hex,
+    '1120' + pin2Hex,
+//    '5101' + messageLengthHexNoPad,
+    '52FF' + messageLengthHex + message,
+  ]
+    .join('')
+    .toUpperCase();
+
+  const packet = Buffer.from(packetString, 'hex');
+  const response = await reader.transmit(packet, 8192);
+  let tmp = response.readUInt16BE().toString(16);
+  console.log("response %s", tmp);
+
+  return response;
+};
