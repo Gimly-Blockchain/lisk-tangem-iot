@@ -4,8 +4,8 @@
 // GPIO.setPin(4, PIN.MODE.INPUT);
 // GPIO.pullControl(4, PIN.MODE.PULL_UP);
 
-import * as cryptography from '@liskhq/lisk-cryptography';
-
+const cryptography = require('@liskhq/lisk-cryptography');
+const { hash, hexToBuffer} = require('@liskhq/lisk-cryptography');
 const LightAlarmTransaction = require('./light-alarm.js');
 const { APIClient } = require('@liskhq/lisk-api-client');
 const {getNetworkIdentifier} = require('@liskhq/lisk-cryptography');
@@ -46,7 +46,7 @@ const checkState = () => {
 		
 		// console.log("got state %s / %s", new Date(), state)
 		if(state === 1) {
-			console.log('Package has been opened! Send lisk transaction!');
+			// console.log('Package has been opened! Send lisk transaction!');
 			// Uncomment the below code in step 1.3 of the workshop
 					
 					let reader = getReader();
@@ -63,28 +63,42 @@ const checkState = () => {
 						
 						console.log("lisk address is %s", credentials.address);
 						
-						// let tx = new LightAlarmTransaction({
-		        //     timestamp: dateToLiskEpochTimestamp(new Date()),
-		        //     networkIdentifier: networkIdentifier
-		        // });
+						let tx = new LightAlarmTransaction({
+		            timestamp: dateToLiskEpochTimestamp(new Date()),
+		            networkIdentifier: networkIdentifier,
+								senderPublicKey: pubkey.toString('hex')
+		        });
 						// const message = Buffer.from(tx);
-						const message = "hello";
-						signMessageUsingActiveCard(message);
+						// const message = "hello";
+						// const message = "hello2";
 						
+						const networkIdentifierBytes = hexToBuffer(networkIdentifier);
+						const transactionWithNetworkIdentifierBytes = Buffer.concat([
+									networkIdentifierBytes,
+									tx.getBytes(),
+								]);
+						
+						const datatosign = transactionWithNetworkIdentifierBytes.toString('hex');
+						console.log("got data to sign %o", datatosign)
+						tx.signature = signMessageUsingActiveCard(datatosign);
+						console.log("got signature %s", tx.signature)
 						
 						// console.log(tx);
 		        // tx.sign(packetCredentials.passphrase);
+						console.log(tx);
+						api.transactions.broadcast(tx.toJSON()).then(res => {
+		            console.log("++++++++++++++++ API Response +++++++++++++++++");
+		            console.log(res.data);
+		            console.log("++++++++++++++++ Transaction Payload +++++++++++++++++");
+		            console.log(tx.stringify());
+		            console.log("++++++++++++++++ End Script +++++++++++++++++");
+		        }).catch(err => {
+		            console.dir(err);
+		        });
+					} else {
+						console.log('no reader')
 					}
 					
-	        // api.transactions.broadcast(tx.toJSON()).then(res => {
-	        //     console.log("++++++++++++++++ API Response +++++++++++++++++");
-	        //     console.log(res.data);
-	        //     console.log("++++++++++++++++ Transaction Payload +++++++++++++++++");
-	        //     console.log(tx.stringify());
-	        //     console.log("++++++++++++++++ End Script +++++++++++++++++");
-	        // }).catch(err => {
-	        //     console.dir(err);
-	        // });
 		} else {
 			console.log('Alles gut');
 		}

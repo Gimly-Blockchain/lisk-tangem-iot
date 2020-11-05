@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 // for now , only unencrypted communication with the card is supported
 
@@ -8,6 +8,8 @@ const getTlvValueType = (tlvTagName) => {
     case 'CardId':
     case 'Batch':
     case 'CrExKey ':
+    case 'TransactionOutHash':
+    case 'Signature':
     case 'IssuerDataPublicKey':
       tlvValueType = 'HexString'; break;
     case 'ManufactureId':
@@ -154,6 +156,7 @@ const decodeTlvValue = (tlvValueType, data, tagName = "") => {
   let result='';
   // console.log("decodeTlvValue: %s - %s (%s) | %o", tagName, tlvValueType, data.length, data);
   switch(tlvValueType) {
+    case 'SigningMethod':
     case 'HexString':
       result=data.toString('hex').toUpperCase(); break;
     // case 'HexStringToHash':
@@ -163,7 +166,6 @@ const decodeTlvValue = (tlvValueType, data, tagName = "") => {
     case 'Utf8String':
       result=data.toString('utf8'); break;
     case 'CardStatus':
-    case 'SigningMethod':
     case 'Uint8':
       result=data.readUInt8(); break;
     case 'Uint16':
@@ -224,7 +226,7 @@ const decodeTLV = (data) => {
   return tlvData;
 }
 
-export const readCard = async (reader) => {
+exports.readCard = async (reader) => {
   try {
     let hash = crypto
        .createHash('sha256')
@@ -282,7 +284,8 @@ const leftPad = (val, size, ch) => {
   return result;
 };
 
-export const signMessageRaw = async (
+// Based on https://github.com/OR13/nfc.did.ai example code
+exports.signMessageRaw = async (
   reader,
   message,
   cid = 'BB03000000000004',
@@ -302,33 +305,74 @@ export const signMessageRaw = async (
     .update(Buffer.from(pin2))
     .digest('hex');
 
-  let messageLengthHex = leftPad((message.length / 2).toString(16), 4, '0');
-  let Lc = leftPad((85 + message.length / 2).toString(16), 6, '0');
-  let messageLengthHexNoPad = leftPad(
-    (message.length / 2).toString(16),
-    2,
-    '0'
-  );
+  // let messageLengthHex = leftPad((message.length / 2).toString(16), 4, '0');
+  // let Lc = leftPad((85 + message.length / 2).toString(16), 6, '0');
+  // let messageLengthHexNoPad = leftPad((message.length / 2).toString(16),2,'0');
+  
+//  let messagelength
 
-  const packetString = [
-    '00', // CLA
-    'FB', // INS
-    '00', // P1
-    '00', // P2
-    Lc, // Lc
-    '0108' + cid,
-    '1020' + pin1Hex,
-    '1120' + pin2Hex,
-//    '5101' + messageLengthHexNoPad,
-    '52FF' + messageLengthHex + message,
-  ]
-    .join('')
-    .toUpperCase();
-
-  const packet = Buffer.from(packetString, 'hex');
-  const response = await reader.transmit(packet, 8192);
-  let tmp = response.readUInt16BE().toString(16);
-  console.log("response %s", tmp);
+//   const packetString = [
+//     '00', // CLA
+//     'FB', // INS
+//     '00', // P1
+//     '00', // P2
+//     Lc, // Lc
+//     '0108' + cid,
+//     '1020' + pin1Hex,
+//     '1120' + pin2Hex,
+// //    '5101' + messageLengthHexNoPad,
+//     '52FF' + messageLengthHex + message,
+//   ]
+//     .join('')
+//     .toUpperCase();
+//
+//   const packet = Buffer.from(packetString, 'hex');
+//   const response = await reader.transmit(packet, 8192);
+//   let tmp = response.readUInt16BE().toString(16);
+//   console.log("response %s", tmp);
+  
+  let messageLengthHex = leftPad((message.length).toString(16), 4, '0');
+  let messageLengthHexNoPad = leftPad((message.length).toString(16),2,'0');
+  
+  let tlv1 = Buffer.from('0108' + cid, 'hex');
+  let tlv2 = Buffer.from('1020' + pin1Hex, 'hex');
+  let tlv3 = Buffer.from('1120' + pin2Hex, 'hex');
+  let tlv4 = Buffer.concat([
+    Buffer.from('52FF' + messageLengthHex, 'hex'),
+    Buffer.from(message)]);
+  let tlv5 = Buffer.concat([
+    Buffer.from('0607', 'hex'),
+    Buffer.from('sha-256')]);
+  let tlv = Buffer.concat([tlv1, tlv2, tlv3, tlv4, tlv5]);
+  
+  let base = Buffer.from([
+      0x00, // Class
+      0xFB, // INS: READ_CARD command
+      0x00, // P1:
+      0x00, // P2
+      tlv.length, // Le: Full Length of UID
+    ]);
+    
+  let request = Buffer.concat([base, tlv]);
+  let response = await reader.transmit(request, 8192);
+  // console.log("response %s", response.toString('hex'));
+  
+  let sw1  = response[response.length - 2]
+  let sw2  = response[response.length - 1]
+  
+  let sw = 256 * sw1 + sw2;
+  if(sw===0x9000) {
+    // console.log("sign OK")
+    // console.log("got data %o", response)
+    let data = decodeTLV(response)
+    // console.log("sign response data: %o", data);
+    return data;
+  } else {
+    console.log("sign ERROR %s", sw.toString(16))
+    return false;
+  }
+    
+  
 
   return response;
 };
