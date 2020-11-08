@@ -292,7 +292,7 @@ exports.signMessageRaw = async (
   pin1 = '000000',
   pin2 = '000'
 ) => {
-  console.log("sign %s", message)
+  console.log("tangemcard.signMessageRaw.sign %s", message)
   // 91B4D142823F7D20C5F08DF69122DE43F35F057A988D9619F6D3138485C9A203
   const pin1Hex = crypto
     .createHash('sha256')
@@ -362,7 +362,7 @@ exports.signMessageRaw = async (
   
   let sw = 256 * sw1 + sw2;
   if(sw===0x9000) {
-    // console.log("sign OK")
+    console.log("sign OK (%s)", sw.toString(16))
     // console.log("got data %o", response)
     let data = decodeTLV(response)
     // console.log("sign response data: %o", data);
@@ -371,8 +371,6 @@ exports.signMessageRaw = async (
     console.log("sign ERROR %s", sw.toString(16))
     return false;
   }
-    
-  
 
   return response;
 };

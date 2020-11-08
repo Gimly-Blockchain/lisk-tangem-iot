@@ -5,10 +5,9 @@
 // GPIO.pullControl(4, PIN.MODE.PULL_UP);
 
 const cryptography = require('@liskhq/lisk-cryptography');
-const { hash, hexToBuffer} = require('@liskhq/lisk-cryptography');
+const { getNetworkIdentifier, signData, hash, hexToBuffer} = require('@liskhq/lisk-cryptography');
 const LightAlarmTransaction = require('./light-alarm.js');
 const { APIClient } = require('@liskhq/lisk-api-client');
-const {getNetworkIdentifier} = require('@liskhq/lisk-cryptography');
 const { initReader, getReader, getActivecardData, signMessageUsingActiveCard } = require('./nfc-reader');
 
 const networkIdentifier = getNetworkIdentifier(
@@ -18,7 +17,7 @@ const networkIdentifier = getNetworkIdentifier(
 // Enter here the IP of the node you want to reach for API requests
 // Check the IP by running `ifconfig` inside your local terminal
 // const api = new APIClient(['http://localhost:4000']);
-const api = new APIClient(['http://192.168.150.96:4000']);
+const api = new APIClient(['http://192.168.178.129:4000']);
 
 // Check config file or curl localhost:4000/api/node/constants to verify your epoc time (OK when using /transport/node/index.js)
 const dateToLiskEpochTimestamp = date => (
@@ -39,7 +38,20 @@ const packetCredentials = {
   "privateKey": "7175ea715dad8971217619d39b95fc79cd0186b7295f0572a8ee787cfe3dfbc93e0373be705cb2c9a2ef533ed2ceaf36c5ec8c5f60668b3b2650a3ef6260a83d"
 }
 
-const checkState = () => {
+// from https://github.com/LiskHQ/lisk-sdk/blob/master/elements/lisk-transactions/src/utils/transaction_id.ts
+const getId = (transactionBytes) => {
+	const transactionHash = cryptography.hash(transactionBytes);
+	const bufferFromFirstEntriesReversed = cryptography.getFirstEightBytesReversed(
+		transactionHash,
+	);
+	const transactionId = cryptography.bufferToIntAsString(
+		bufferFromFirstEntriesReversed,
+	);
+
+	return transactionId;
+};
+
+const checkState = async () => {
 	try {
 		// let state = GPIO.read(4);
 		let state = 1;
@@ -49,6 +61,7 @@ const checkState = () => {
 			// console.log('Package has been opened! Send lisk transaction!');
 			// Uncomment the below code in step 1.3 of the workshop
 					
+					console.log("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 					let reader = getReader();
 					if(false!==reader) {
 						let activeCardData = getActivecardData()
@@ -77,24 +90,31 @@ const checkState = () => {
 									networkIdentifierBytes,
 									tx.getBytes(),
 								]);
-						
 						const datatosign = transactionWithNetworkIdentifierBytes.toString('hex');
-						console.log("got data to sign %o", datatosign)
-						tx.signature = signMessageUsingActiveCard(datatosign);
-						console.log("got signature %s", tx.signature)
+						// console.log("got data to sign %o", datatosign)
+						tx._signature = await signMessageUsingActiveCard(datatosign);
+						// console.log("got signature %s", tx.signature)
 						
-						// console.log(tx);
+						// const id = hash(tx.getBytes()).toString('hex')
+						const id = getId(tx.getBytes());
+						console.log("got id %o / oldid %o", id, tx.id);
+						tx._id = id;
+						
 		        // tx.sign(packetCredentials.passphrase);
-						console.log(tx);
-						api.transactions.broadcast(tx.toJSON()).then(res => {
-		            console.log("++++++++++++++++ API Response +++++++++++++++++");
-		            console.log(res.data);
-		            console.log("++++++++++++++++ Transaction Payload +++++++++++++++++");
-		            console.log(tx.stringify());
-		            console.log("++++++++++++++++ End Script +++++++++++++++++");
-		        }).catch(err => {
-		            console.dir(err);
-		        });
+						console.log("sending transaction to the network")
+						console.log("%s", tx.toJSON());
+
+						let result = await api.transactions.broadcast(tx.toJSON());
+						console.log("broadcast result %o", result);
+						// .then(res => {
+		        //     console.log("++++++++++++++++ API Response +++++++++++++++++");
+		        //     console.log(res.data);
+		        //     console.log("++++++++++++++++ Transaction Payload +++++++++++++++++");
+		        //     console.log(tx.stringify());
+		        //     console.log("++++++++++++++++ End Script +++++++++++++++++");
+		        // }).catch(err => {
+		        //     console.dir("broadcast error: %o", err);
+		        // });
 					} else {
 						console.log('no reader')
 					}
