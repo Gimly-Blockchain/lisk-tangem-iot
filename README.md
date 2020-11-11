@@ -36,10 +36,10 @@ The project will be divided in several smaller steps
 * Tangem by Gimly cards are connected to Lisk blockchain
   * A wallet in the card is created upon personalisation of Tangem card, using ed25519 curve.
 * “Readcard” function partially implemented in IoT device
+* Generic wallet on the tangem card linked to the lisk blockchain
+* "Sign" transaction for the lisk blockchain implemented in the IoT device
+* Transactions succesfully broadcast to and accepted by the lisk blockchain
 
 ### Next steps: 
-* decode card UID from the TLV record that is returned by readcard command
-* Implement request wallet public key command in tangem library
-* Implement sign transaction command in tangem library
-* Create lisk transaction, replace sign transaction (index.js#55) with card based signing
+* Implement new measurement custom transaction that registers measurement data that is signed by the hardware wallet on the raspberry pi
 * Test on raspberry pi
