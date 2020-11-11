@@ -11,7 +11,6 @@
   "dependencies": {
     "@liskhq/lisk-api-client": "^3.0.1",
     "@liskhq/lisk-transactions": "^3.0.1",
-    "@liskhq/lisk-cryptography": "^2.4.1",
-    "rpi-pins": "1.1.2"
+    "@liskhq/lisk-cryptography": "^2.4.1"
   }
 }

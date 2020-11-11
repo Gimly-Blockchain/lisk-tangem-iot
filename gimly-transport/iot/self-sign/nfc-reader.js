@@ -1,6 +1,4 @@
-// import { readCard, signMessageRaw } from './tangem/tangemcard';
-// import { NFC } from 'nfc-pcsc';
-const { readCard, signMessageRaw } = require('./tangem/tangemcard');
+const { readCard, signData } = require('./tangem/tangemcard');
 const { NFC } = require('nfc-pcsc');
 
 let nfc = new NFC(); // optionally you can pass logger
@@ -8,37 +6,25 @@ let nfc = new NFC(); // optionally you can pass logger
 var gActiveReader = false;
 var gActivecardData = false; // no card available
 
-exports.getReader = () => {
-	return gActiveReader;
-}
+exports.getReader = () => gActiveReader;
 
-exports.getActivecardData = () => {
-	return gActivecardData;
-}
+exports.getActivecardData = () => gActivecardData;
 
-exports.initReader = ( onCardPresent, onCardRemoved) => {
-	if(undefined===nfc) {
-		nfc = new NFC(); // optionally you can pass logger
-	}
-}
-
-exports.signMessageUsingActiveCard = async ( message ) => {
+exports.signDataUsingActiveCard = async ( data, isRawData=false  ) => {
 	try {
 		if(gActiveReader!==false && gActivecardData!==false) {
-			// console.log("active reader %o", gActiveReader)
-			// console.log("active card data %o", gActivecardData)
-			let result = await signMessageRaw(gActiveReader, message, gActivecardData.CardId);
+			let result = await signData(gActiveReader, data, isRawData, gActivecardData.CardId);
 			if(false!==result && "Signature" in result) {
-				console.log("got signature %o", result.Signature)
 				return result.Signature
 			} else {
+				console.log("nfc-reader.signDataUsingActiveCard - unable to sign data")
 				return false;
 			}
 		} else {
 			return false;
 		}
 	} catch(ex) {
-		console.log("sign error %s", ex.message)
+		console.log("nfc-reader.signDataUsingActiveCard - error %s", ex.message)
 	}
 }
 
