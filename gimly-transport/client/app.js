@@ -6,6 +6,7 @@ const RegisterPacketTransaction = require('../transactions/register-packet');
 const LightAlarmTransaction = require('../transactions/light-alarm');
 const StartTransportTransaction = require('../transactions/start-transport');
 const FinishTransportTransaction = require('../transactions/finish-transport');
+const RegisterMeasurementTransaction = require('../transactions/register-measurement');
 const transactions = require('@liskhq/lisk-transactions');
 const cryptography = require('@liskhq/lisk-cryptography');
 const { Mnemonic } = require('@liskhq/lisk-passphrase');
@@ -153,6 +154,56 @@ app.get('/light-alarm', async(req, res) => {
     });
 
     res.render('light-alarm', { transactions });
+});
+
+app.get('/measurements', async(req, res) => {
+  let offset = 0;
+  let transactions = [];
+  let transactionsArray = [];
+
+  do {
+      // const retrievedtransactions = await api.transactions.get({ limit: 100, offset });
+      const retrievedtransactions = await api.transactions.get({ type: RegisterMeasurementTransaction.TYPE, limit: 100, offset });
+      transactions = retrievedtransactions.data;
+      transactionsArray.push(...transactions);
+
+      if (transactions.length === 100) {
+          offset += 100;
+      }
+  } while (transactions.length === 100);
+  
+  // Sort desc
+  transactionsArray.sort((a, b) => {
+    // sensor data is grouped together per sensor: sort on packet ID first
+    if(a.senderId > b.senderId) return -1;
+
+    if(a.senderId < b.senderId) return 1;
+    
+    // sort on timestamp next
+    if (a.timestamp > b.timestamp) return -1;
+
+    if (a.timestamp < b.timestamp) return 1;
+
+    if (a.timestamp === b.timestamp) return 0;
+  });
+    
+  let temperaturedata = {
+    datasets: []
+  }
+
+  transactionsArray.forEach(tx => {
+    let idx = temperaturedata.datasets.findIndex(dataset=>dataset.label===tx.senderId);
+    if(-1===idx) {
+      temperaturedata.datasets.push({label: tx.senderId, data: []});
+      idx=temperaturedata.datasets.length-1;
+    }
+  
+    temperaturedata.datasets[idx].data.push({x: tx.timestamp*1000, y:tx.asset.temperature});
+  });
+
+  res.render('measurements', {
+    transactions,
+    temperaturedata: JSON.stringify(temperaturedata) }); // , humidity
 });
 
 /**
