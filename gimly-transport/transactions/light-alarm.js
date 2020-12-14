@@ -26,87 +26,85 @@ class LightAlarmTransaction extends BaseTransaction {
         return 23;
     }
 
-    static get FEE () {
-        return '0';
-    };
-
     async prepare(store) {
         await store.account.cache([
             {
-                address: this.senderId,
+                address: this.senderId, // Sent by packet (self-signed)
             }
         ]);
     }
 
     validateAsset() {
+        // Static checks for presence of `timestamp` which holds the timestamp of when the alarm was triggered
         const errors = [];
-        /*
-        Implement your own logic here.
-        Static checks for presence of `timestamp` which holds the timestamp of when the alarm was triggered
-        */
-        if("timestamp" in this === false) {
-          errors.push(
-            new TransactionError(
-              'timestamp missing for this alarm',
-            	this.id,
-            	'.timestamp',
-              'missing',
-              'A numerical value representing a timestamp')
-          )
-        } else if(isNaN(this.timestamp) === true) {
-          errors.push(
-            new TransactionError(
-              'invalid timestamp set for this alarm',
-            	this.id,
-            	'.timestamp',
-              this.timestamp,
-              'A numerical value representing a timestamp')
-          )
+        if (!this.asset.timestamp || typeof this.asset.timestamp !== 'number') {
+            errors.push(
+                new TransactionError(
+                    'Invalid ".timestamp" defined on transaction',
+                    this.id,
+                    '.timestamp',
+                    this.asset.timestamp
+                )
+            );
         }
-
         return errors;
     }
 
-    /*Inside of `applyAsset`, it is possible to utilise the cached data from the `prepare` function,
-     * which is stored inside of the `store` parameter.*/
-    applyAsset(store) {
+    async applyAsset(store) {
         const errors = [];
 
-        /* With `store.account.get(ADDRESS)` the account data of the packet account can be seen.
-         * `this.senderId` is specified as an address, due to the fact that the light alarm is always signed and sent by the packet itself. */
-        const packet = store.account.get(this.senderId);
+        const packet = await store.account.get(this.senderId);
+        if (packet.asset.status !== 'ongoing' && packet.asset.status !== 'alarm') {
+            errors.push(
+                new TransactionError(
+                    'Transaction invalid because delivery is not "ongoing".',
+                    this.id,
+                    'packet.asset.status',
+                    packet.asset.status,
+                    `Expected status to be equal to "ongoing" or "alarm"`,
+                )
+            );
+
+            return errors;
+        }
 
         /**
          * Update the Packet account:
          * - set packet status to "alarm"
          * - add current timestamp to light alarms list
          */
-        packet.asset.status = 'alarm';
-        packet.asset.alarms = packet.asset.alarms ? packet.asset.alarms : {};
-        packet.asset.alarms.light = packet.asset.alarms.light ? packet.asset.alarms.light : [];
-        packet.asset.alarms.light.push(this.timestamp);
+        const alarms = packet.asset.alarms ? packet.asset.alarms : {};
+        alarms.light = packet.asset.alarms.light ? packet.asset.alarms.light : [];
+        alarms.light.push(this.asset.timestamp);
 
-        /* When all changes have been made they are applied to the database by executing `store.account.set(ADDRESS, DATA)`; */
+        packet.asset = {
+            ...packet.asset,
+            status: 'alarm',
+            alarms: alarms
+
+        };
+
         store.account.set(packet.address, packet);
 
-        /* Unlike in `validateAsset`, the `store` parameter is present here.
-         * Therefore inside of `applyAsset` it is possible to make dynamic checks against the existing data in the database.
-         *  As this is not required here, an empty `errors` array is returned at the end of the function. */
         return errors;
     }
-    
-    undoAsset(store) {
+
+    async undoAsset(store) {
         const errors = [];
-        const packet = store.account.get(this.senderId);
+        const packet = await store.account.get(this.senderId);
 
         /* --- Revert packet status --- */
-        packet.asset.status = null;
-        packet.asset.alarms.light.pop();
-
+        const lightAlarms = packet.asset.alarms.light.pop();
+        packet.asset = {
+            ...packet.asset,
+            status: 'ongoing',
+            alarms : {
+                light: lightAlarms
+            }
+        };
         store.account.set(packet.address, packet);
         return errors;
     }
-
 }
 
 module.exports = LightAlarmTransaction;

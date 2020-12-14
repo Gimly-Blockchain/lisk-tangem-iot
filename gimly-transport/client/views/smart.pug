@@ -1,0 +1,144 @@
+extends index.pug
+
+block content
+  //- script.
+  //-   setTimeout(() => { 
+  //-         let autorefresh = ! #{haveCard}|| #{currentPacketId}!==false;
+  //-         if(autorefresh) { window.location.reload(1); }
+  //-       }, 
+  //-       !#{haveCard} ? 1000:5000
+  //-     );
+
+  if (!haveCard)
+    div.form-group
+      h2 Put the smart package on the NFC reader
+
+  else
+    if (currentPacketId!==false&&false===currentPacket)
+      div.form-group
+        h2 Invalid wallet on this card
+      
+    else if (currentPacketId===false)
+      form(method='POST' action='/post-smart-registerpackage')
+        div.form-group
+          h4 Smart package on reader has not been registered
+          
+          br
+          h2 Create shipment
+
+          label(for='passphrasesender') Sender:
+          select#passphrasesender.form-control(name='passphrasesender')
+            each account in demoaccounts
+              option(value=account.passphrase, selected=(account.passphrase==locals.formdata.passphrasesender)) #{account.description}
+
+          br
+          input#submitfund.btn.btn-warning(type='submit', name='submit', value='Fund Sender with 100 LSK')
+
+        div.form-group
+          label(for='recipient') Recipient:
+          select#recipient.form-control(name='passphraserecipient')
+            each account in demoaccounts
+              option(value=account.passphrase, selected=(account.passphrase==locals.formdata.passphraserecipient)) #{account.description}
+          label(for='postage') Postage (LSK):
+          input#postage.form-control(type='text', value=locals.formdata.postage name='postage')
+          label(for='security') Security (LSK):
+          input#security.form-control(type='text', value=locals.formdata.security name='security')
+          label(for='minTrust') Min trust:
+          input#minTrust.form-control(type='text', value=locals.formdata.minTrust name='minTrust')
+        div.form-group
+          input#submitcreate.btn.btn-warning(type='submit', name='submit', value='Create')
+    else 
+      div.form-group
+        h2 Packet Info
+
+        p.form-control Package ID: #{currentPacketId}            
+        p.form-control Package status: #{currentPacket.asset.status}
+        p.form-control Sender: #{currentPacket.asset.sender}
+        p.form-control Recipient: #{currentPacket.asset.recipient}
+        //- p.form-control Security: #{currentPacket.asset.security}
+        //- p.form-control Min Trust: #{currentPacket.asset.minTrust}
+      
+      if 'status' in currentPacket.asset == false 
+        h2 Start transport
+        
+        p wait for next block
+        
+      else if currentPacket.asset.status == 'pending'
+        
+        h2 Start transport
+
+        form(method='POST' action='/post-smart-starttransport')
+          div.form-group
+            label(for='carrier') Carrier:
+            select#carrier.form-control(value=locals.formdata.passphrasecarrier, name='passphrasecarrier')
+              each account in demoaccounts
+                option(value=account.passphrase, selected=(account.passphrase==locals.formdata.passphrasecarrier)) #{account.description}
+          div.form-group
+            input#submitfund.btn.btn-warning(type='submit', name='submit', value='Fund Carrier with 1500 LSK')
+          div.form-group
+            button.btn.btn-warning(type='submit') Start transport
+        
+      else if (currentPacket.asset.status == 'ongoing'||currentPacket.asset.status == "alarm")
+        
+        script(src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js')
+        script.
+          // setTimeout(function() { window.location.reload(1);}, 5000);
+
+          function displayChart() {
+            let ctx = document.getElementById("chartPic").getContext('2d');
+            
+            let data = JSON.parse('!{temperaturedata}');
+            // console.log("temperaturedata %o", data)
+            let chart = new Chart(ctx,  { type: 'scatter', data  });
+          };
+         
+          window.onload = displayChart;
+         
+        h2 Track shipment 
+
+        div(id="divCanvas" width="400" height="150" border="1")
+          canvas(id="chartPic" width="400" height="150" border="1")
+          
+        form(method='POST' action='/post-smart-addmeasurement')
+          div.form-group
+            button.btn.btn-warning(type='submit') Add measurement
+            
+        h2 Finish transport 
+        
+        form(method='POST' action='/post-smart-finishtransport')
+          div.form-group
+            label(for='showrecipient') Recipient:
+            select#showrecipient.form-control(name='showrecipient', disabled=true)
+              each account in demoaccounts
+                option(value=account.passphrase, selected=(account.passphrase==currentRecipientPassphrase)) #{account.description}
+            // create utility field for recipientpassphrase in the form fields
+            each account in demoaccounts
+                if (account.passphrase==currentRecipientPassphrase)
+                  input(type='hidden', name='passphraserecipient')  
+          div.form-group
+            input#submitfund.btn.btn-warning(type='submit', name='submit', value='Fund recipient with 100 LSK')
+          div.form-group
+            label(for='endstatus') Status:
+            select#endstatus.form-control.input-lg(name='endstatus')
+                option(value='success', selected=('success'===locals.formdata.endstatus)) Success
+                option(value='fail', selected=('success'!==locals.formdata.endstatus)) Fail
+          div.form-group
+            button.btn.btn-warning(type='submit') Finish transport
+            
+      else 
+
+        h2 Package delivered
+              
+  div.form-group
+    hr
+      
+    input#submitcreate.btn.btn-warning(type='button', onclick=' window.location.reload(1)' value='Refresh')
+      
+    hr
+
+    form(method='POST' action='/post-smart-erasewallet')
+      div.form-group
+        input#resetsmartpackage.btn.btn-warning(type='submit', name='submit', value='Reset smart package')
+              
+        
+

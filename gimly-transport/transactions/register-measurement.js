@@ -1,16 +1,6 @@
 const { BaseTransaction, TransactionError } = require('@liskhq/lisk-transactions');
 const { MeasurementValidator } = require('./measurement.utils.js');
 
-/*
- Assets : {
-      id: string,
-      measurements: array of
-        {
-          temperature: string
-          humidity: string
-        }
-      ]
-*/
 class RegisterMeasurementTransaction extends BaseTransaction {
     static get TYPE () {
         return 24;
@@ -42,20 +32,28 @@ class RegisterMeasurementTransaction extends BaseTransaction {
           errors.push(new TransactionError("packet not found", this.id, "this.asset.id", this.asset.id, "An existing packet ID on recipient account"));
         }
         
-        if(false === "asset" in packet) { packet.asset = {} };
-        if(false === "measurements" in packet.asset) { packet.asset.measurements = [] };
-        packet.asset.transportstatus = 'active';
-        packet.asset.measurements.push({ temperature: this.asset.temperature, humidity: this.asset.humidity });
-        store.account.set(packet.address, packet);
-
+        if(packet.status==='ongoing'||packet.status==='alarm') {
+          let timestamp = dateToLiskEpochTimestamp(new Date());
+          if(false === "asset" in packet) { packet.asset = {} };
+          if(false === "measurements" in packet.asset) { packet.asset.measurements = [] };
+          packet.asset.transportstatus = 'active';
+          packet.asset.measurements.push({ timestamp: this.asset.timestamp,  temperature: this.asset.temperature, humidity: this.asset.humidity });
+          store.account.set(packet.address, packet);
+        }
+        
         return errors;
     }
 
     undoAsset(store) {
         const errors = [];
         const packet = store.account.get(this.asset.id);
-
-        packet.asset.measurements.pop(); // discard added measurements
+        if (packet === undefined) {
+          errors.push(new TransactionError("packet not found", this.id, "this.asset.id", this.asset.id, "An existing packet ID on recipient account"));
+        }
+        
+        if(packet.status==='ongoing') {
+          packet.asset.measurements.pop(); // discard added measurements
+        }
 
         store.account.set(this.asset.id, packet);
 

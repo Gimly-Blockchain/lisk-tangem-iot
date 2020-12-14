@@ -1,0 +1,12 @@
+{
+  "name": "tangem-smart",
+  "version": "1.0.0",
+  "description": "NFC and card functions for tangem cards",
+  "main": "nfc-reader.js",
+  "scripts": {},
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "nfc-pcsc": "^0.8.0"
+  }
+}

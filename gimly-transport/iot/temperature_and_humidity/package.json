@@ -1,14 +1,33 @@
 {
-    "name": "temperature_and_humidity",
-    "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
-    "scripts": {
-      "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "author": "",
-    "license": "ISC",
-    "dependencies": {
-      "rpi-dht-sensor": "0.1.1"
-    }
+  "name": "temperature-humidity",
+  "version": "1.0.0",
+  "description": "lisk sdk transport demo - measurement module",
+  "repository": {},
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js --watch . ../../transactions"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@liskhq/lisk-api-client": "^4.0.0",
+    "@liskhq/lisk-transactions": "^4.0.0",
+    "@liskhq/lisk-cryptography": "^2.5.0",
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "install": "^0.13.0",
+    "nfc-pcsc": "^0.8.0",
+    "npm": "^6.14.8"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.6"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "./*",
+      "../../transactions/*"
+    ],
+    "delay": "2500"
   }
+}

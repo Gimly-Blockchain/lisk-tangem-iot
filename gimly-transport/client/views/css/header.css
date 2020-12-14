@@ -13,6 +13,17 @@ html.is-clipped--navbar {
 
 }
 
+.gimly-logo {
+    display: block;
+    width: 100px;
+    height: 80px;
+    background-image: url(gimly-logo.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+    margin: 25px;
+    margin-top: 15px;
+}
+
 body {
     padding-top: var(--height-navbar);
 }

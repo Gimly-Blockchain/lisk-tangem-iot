@@ -1,7 +1,7 @@
 doctype html
 html(lang="en")
   head
-    title Lisk Transport Explorer
+    title NFC Smart Card &amp; Lisk Transport Demonstration
     link(href='favicon-32x32.png', rel='icon', type='image/png')
     link(href='https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css', rel='stylesheet')
     link(href='https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/themes/prism.min.css', rel='stylesheet')
@@ -21,58 +21,21 @@ html(lang="en")
                 div.navbar-content
                     div.navbar-brand
                         a(href='/').lisk-logo
-                        span.nav-brand__name-area
-                            strong.nav-brand__name-area__title Transport
+                        a(href='/').gimly-logo
                     div#topbar-nav.navbar-menu
                         div.navbar-end
-                            a(href='/accounts').navbar-item Accounts
-                            a(href='/packet-accounts').navbar-item Packet &amp; Carrier
-                            a.divider-vertical
-                            a(href='/faucet').navbar-item Faucet
-                            a(href='/initialize').navbar-item Initialize
-                            a(href='/post-register-packet').navbar-item Register Packet
-                            a(href='/post-start-transport').navbar-item Start Transport
-                            a(href='/post-finish-transport').navbar-item Finish Transport
-                            a(href='/measurements').navbar-item View Measurements
-
+                           a(href='/smart').navbar-item Smart Package
+                           a.divider-vertical
+                           a(href='/accounts').navbar-item Accounts
+                           a(href='/packet-accounts').navbar-item History
     .container
       block content
         .jumbotron
-          h1 Lisk Transport Explorer
+          h1 NFC Smart Card &amp; Lisk Transport Demonstration
           p.lead
-            | Browse transactions for Lisk Transport Proof of Concept
-    //
-    //style.
-    //    @import url('https://fonts.googleapis.com/css?family=Poppins&display=swap');
-    //    body {
-    //        background: #287ae2;
-    //        width: 100%;
-    //        min-height: 100vh;
-    //    }
-    //    h1, .lead, .nav-link {
-    //        font-family: 'Poppins', sans-serif;
-    //    }
-    //    .navbar-expand-lg {
-    //        background-color: #001a3e !important;
-    //    }
-    //    .nav-link, .navbar-brand {
-    //        color: white !important;
-    //    }
-    //    .navbar-brand {
-    //        font-weight: bold;
-    //    }
-    //    h2 {
-    //        color: white;
-    //        padding-top: 50px;
-    //        padding-bottom: 15px;
-    //        font-family: 'Poppins', sans-serif;
-    //        font-weight: bold;
-    //    }
-    //    th, td {
-    //        padding: 6px;
-    //    }
-    //    table td, table th {
-    //        border: 2px solid white;
-    //        color: white;
-    //    }
+            | Connect smartcard reader and select Smart Package to start
+          p.lead
+            | Select Accounts to view account status 
+          p.lead
+            | Select History to view transport status
 

@@ -1,13 +1,13 @@
 const { Application, genesisBlockDevnet, configDevnet } = require('lisk-sdk');
+const RegisterMeasurementTransaction = require('../transactions/register-measurement');
 const RegisterPacketTransaction = require('../transactions/register-packet');
 const StartTransportTransaction = require('../transactions/start-transport');
 const FinishTransportTransaction = require('../transactions/finish-transport');
 const LightAlarmTransaction = require('../transactions/light-alarm');
-const RegisterMeasurementTransaction = require('../transactions/register-measurement');
 
-configDevnet.app.label = 'lisk-transport';
+configDevnet.label = 'lisk-transport';
 configDevnet.modules.http_api.access.public = true;
-// configDevnet.components.storage.host = 'db';
+//configDevnet.components.logger.consoleLogLevel = 'debug';
 
 const app = new Application(genesisBlockDevnet, configDevnet);
 app.registerTransaction(RegisterPacketTransaction);

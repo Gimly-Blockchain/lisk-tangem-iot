@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 
 // for now , only unencrypted communication with the card is supported
+// thanks to https://github.com/OR13/nfc.did.ai for sample code
 
 const getTlvValueType = (tlvTagName) => {
   let tlvValueType = 'ByteArray';
@@ -256,7 +257,7 @@ exports.readCard = async (reader) => {
     let sw = 256 * sw1 + sw2;
     
     if(sw===0x9000) {
-      console.log("card_read OK")
+      // console.log("card_read OK")
       
       // console.log("got data %o", response)
       
@@ -342,7 +343,7 @@ exports.signData = async (
     
     let sw = 256 * sw1 + sw2;
     if(sw===0x9000) {
-      console.log("sign OK (%s)", sw.toString(16))
+      // console.log("sign OK (%s)", sw.toString(16))
       return decodeTLV(response);
     } else {
       console.error("sign ERROR (card response %s)", sw.toString(16))
@@ -352,6 +353,116 @@ exports.signData = async (
     return response;
   } catch(ex) {
     console.error("sign ERROR %s", ex.message)
+    return false;
+  }
+};
+
+exports.purgeWallet = async (
+  reader,
+  cid = 'BB03000000000004',
+  pin1 = '000000',
+  pin2 = '000',
+) => {
+  try {
+    const pin1Hex = crypto
+      .createHash('sha256')
+      .update(Buffer.from(pin1))
+      .digest('hex');
+
+    const pin2Hex = crypto
+      .createHash('sha256')
+      .update(Buffer.from(pin2))
+      .digest('hex');
+      
+    let tlv;
+    let tlv1 = Buffer.from('0108' + cid, 'hex');
+    let tlv2 = Buffer.from('1020' + pin1Hex, 'hex');
+    let tlv3 = Buffer.from('1120' + pin2Hex, 'hex');
+    tlv = Buffer.concat([tlv1, tlv2, tlv3]);
+    
+    let base = Buffer.from([
+        0x00, // Class
+        0xFC, // INS: Purge wallet command
+        0x00, // P1:
+        0x00, // P2
+        tlv.length, // Le: Full Length of UID
+      ]);
+      
+    let request = Buffer.concat([base, tlv]);
+    let response = await reader.transmit(request, 8192);
+    // console.log("response %s", response.toString('hex'));
+    
+    let sw1  = response[response.length - 2]
+    let sw2  = response[response.length - 1]
+    
+    let sw = 256 * sw1 + sw2;
+    if(sw===0x9000) {
+      // console.log("purgeWallet OK (%s)", sw.toString(16))
+      return decodeTLV(response);
+    } else {
+      console.error("purgeWallet ERROR (card response %s)", sw.toString(16))
+      return false;
+    }
+
+    return response;
+  } catch(ex) {
+    console.error("purgeWallet ERROR %s", ex.message)
+    return false;
+  }
+};
+
+exports.createWallet = async (
+  reader,
+  data,
+  isRawData = true,
+  cid = 'BB03000000000004',
+  pin1 = '000000',
+  pin2 = '000',
+) => {
+  try {
+    const pin1Hex = crypto
+      .createHash('sha256')
+      .update(Buffer.from(pin1))
+      .digest('hex');
+
+    const pin2Hex = crypto
+      .createHash('sha256')
+      .update(Buffer.from(pin2))
+      .digest('hex');
+      
+    let tlv;
+    let tlv1 = Buffer.from('0108' + cid, 'hex');
+    let tlv2 = Buffer.from('1020' + pin1Hex, 'hex');
+    let tlv3 = Buffer.from('1120' + pin2Hex, 'hex');
+    tlv = Buffer.concat([tlv1, tlv2, tlv3]);
+    
+    let base = Buffer.from([
+        0x00, // Class
+        0xF8, // INS: CREATE_WALLET command
+        0x00, // P1:
+        0x00, // P2
+        tlv.length, // Le: Full Length of UID
+      ]);
+      
+    let request = Buffer.concat([base, tlv]);
+    let response = await reader.transmit(request, 8192);
+    // console.log("response %s", response.toString('hex'));
+    
+    let sw1  = response[response.length - 2]
+    let sw2  = response[response.length - 1]
+    
+    let sw = 256 * sw1 + sw2;
+    if(sw===0x9000) {
+      // console.log("createWallet OK (%s)", sw.toString(16))
+      return decodeTLV(response);
+    } else {
+      console.error("createWallet ERROR (card response %s)", sw.toString(16))
+      return false;
+    }
+
+    return response;
+  } catch(ex) {
+    console.error("createWallet ERROR %s", ex.message)
     return false;
   }
 };

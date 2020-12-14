@@ -1,5 +1,8 @@
-const { readCard, signData } = require('./tangem/tangemcard');
+const { readCard, signData, createWallet, purgeWallet } = require('./tangemcard');
 const { NFC } = require('nfc-pcsc');
+
+// This module is based on source code from
+// https://github.com/pokusew/nfc-pcsc
 
 let nfc = new NFC(); // optionally you can pass logger
 
@@ -28,32 +31,96 @@ exports.signDataUsingActiveCard = async ( data, isRawData=false  ) => {
 	}
 }
 
+exports.createWalletUsingActiveCard = async () => {
+	try {
+		if(gActiveReader!==false && gActivecardData!==false) {
+			let result = await createWallet(gActiveReader, gActivecardData.CardId);
+			// console.log(result);
+			
+			await exports.rescanActiveCard();
+		} else {
+			return false;
+		}
+	} catch(ex) {
+		console.log("nfc-reader.signDataUsingActiveCard - error %s", ex.message)
+	}
+}
+
+exports.purgeWalletUsingActiveCard = async () => {
+	try {
+		if(gActiveReader!==false && gActivecardData!==false) {
+			let result = await purgeWallet(gActiveReader, gActivecardData.CardId);
+			// console.log(result);
+			
+			await exports.rescanActiveCard();
+			
+			return true;
+		} else {
+			return false;
+		}
+	} catch(ex) {
+		console.log("nfc-reader.signDataUsingActiveCard - error %s", ex.message)
+	}
+}
+
+exports.rescanActiveCard = async () => {
+	try {
+		if(gActiveReader!==false && gActivecardData!==false) {
+			let data = await readCard(gActiveReader);
+			
+			// console.log(`${gActiveReader.reader.name}  card found attached`);
+			// console.log(`device: `, gActiveReader.reader);
+
+			// console.log("got card data %o", data)
+			
+			// decode part of card data to check if card has been properly set up
+			
+			gActivecardData = data;
+			if("WalletPublicKey" in data) {
+				// console.log("got wallet public key %s", data.WalletPublicKey.toString("hex"))
+	      showResultOnReader(gActiveReader, ledSIGNALSTATE3, dataSIGNALSTATE3)
+			} else {
+				// console.log("no wallet on this card")
+			}
+			
+			return true;
+		} else {
+			return false;
+		}
+	} catch(ex) {
+		console.log("nfc-reader.signDataUsingActiveCard - error %s", ex.message)
+	}
+}
+
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 nfc.on('reader', async reader => {
 	
 	reader.autoProcessing = false;
   
-	console.log(`${reader.reader.name}  device attached`);
-	console.log(`device: `, reader.reader);
+	// console.log(`${reader.reader.name}  device attached`);
+	// console.log(`device: `, reader.reader);
 	
 	reader.on('card', async card => {
     try {
 			gActiveReader = reader;
 			let data = await readCard(reader);
 			
-			console.log(`${reader.reader.name}  card found attached`);
-			console.log(`device: `, reader.reader);
+			// console.log(`${reader.reader.name}  card found attached`);
+			// console.log(`device: `, reader.reader);
 
 			// console.log("got card data %o", data)
 			
 			// decode part of card data to check if card has been properly set up
 			
-			console.log("got wallet public key %s", data.WalletPublicKey.toString("hex"))
-			
 			gActivecardData = data;
+			if("WalletPublicKey" in data) {
+				// console.log("got wallet public key %s", data.WalletPublicKey.toString("hex"))
+	      showResultOnReader(reader, ledSIGNALSTATE3, dataSIGNALSTATE3)
+			} else {
+				// console.log("no wallet on this card")
+			}
 			
-      showResultOnReader(reader, ledSIGNALSTATE3, dataSIGNALSTATE3)
   	} catch (err) {
   		console.error(`error when reading data`, err);
       showResultOnReader(reader, ledSIGNALSTATE3, dataSIGNALSTATE3)
@@ -61,7 +128,7 @@ nfc.on('reader', async reader => {
 	});
 
 	reader.on('card.off', card => {
-		console.log(`${reader.reader.name}  card removed`, card);
+		// console.log(`${reader.reader.name}  card removed`, card);
 		gActiveReader = false;
 		gActivecardData = false;
 	});

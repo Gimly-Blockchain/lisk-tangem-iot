@@ -13,8 +13,7 @@
  */
 const {
     BaseTransaction,
-    TransactionError,
-    utils
+    TransactionError
 } = require('@liskhq/lisk-transactions');
 
 class StartTransportTransaction extends BaseTransaction {
@@ -23,15 +22,10 @@ class StartTransportTransaction extends BaseTransaction {
         return 21;
     }
 
-    static get FEE () {
-        //return `${10 ** 8}`;
-        return '0';
-    };
-
     async prepare(store) {
         await store.account.cache([
             {
-                address: this.asset.recipientId,
+                address: this.asset.packetId,
             },
             {
                 address: this.senderId,
@@ -45,33 +39,40 @@ class StartTransportTransaction extends BaseTransaction {
         return errors;
     }
 
-    applyAsset(store) {
+    async applyAsset(store) {
         const errors = [];
-        const packet = store.account.get(this.asset.recipientId);
+        const packet = await store.account.get(this.asset.packetId);
         if (packet.asset.status === "pending"){
-            const carrier = store.account.get(this.senderId);
+            const carrier = await store.account.get(this.senderId);
+            const carrierTrust = carrier.asset.trust ? carrier.asset.trust : '0';
+            const carrierBalance = carrier.balance;
+            const packetSecurity = BigInt(packet.asset.security);
             // If the carrier has the trust to transport the packet
-            const carrierTrust = carrier.asset.trust ? carrier.asset.trust : 0;
-            const carrierBalance = new utils.BigNum(carrier.balance);
-            const packetSecurity = new utils.BigNum(packet.asset.security);
-            if (packet.asset.minTrust <= carrierTrust && carrierBalance.gte(packetSecurity)) {
+            if (BigInt(packet.asset.minTrust) <= BigInt(carrierTrust) && (carrierBalance >= packetSecurity)) {
                 /**
                  * Update the Carrier account:
                  * - Lock security inside the account
                  * - Remove the security form balance
                  * - initialize carriertrust, if not present already
                  */
-                const carrierBalanceWithoutSecurity = carrierBalance.sub(packetSecurity);
-                const carrierTrust = carrier.asset.trust ? carrier.asset.trust : 0;
-                const updatedCarrier = { /* Write your code here */ };
-                store.account.set(carrier.address, updatedCarrier);
+                carrier.balance = carrierBalance - packetSecurity;
+                carrier.asset = {
+                    trust: carrierTrust,
+                    lockedSecurity: packet.asset.security
+                };
+
+                store.account.set(carrier.address, carrier);
                 /**
                  * Update the Packet account:
                  * - Set status to "ongoing"
                  * - set carrier to ID of the carrier
                  */
-                packet.asset.status = "ongoing";
-                packet.asset.carrier = carrier.address;
+                packet.asset = {
+                    ...packet.asset,
+                    status: "ongoing",
+                    carrier: carrier.address
+                };
+
                 store.account.set(packet.address, packet);
             } else {
                 errors.push(
@@ -80,7 +81,7 @@ class StartTransportTransaction extends BaseTransaction {
                         packet.asset.minTrust,
                         carrier.asset.trust,
                         packet.asset.security,
-                        carrier.balance
+                        carrier.balance.toString()
                     )
                 );
             }
@@ -96,31 +97,20 @@ class StartTransportTransaction extends BaseTransaction {
         return errors;
     }
 
-    undoAsset(store) {
+    async undoAsset(store) {
         const errors = [];
-        const packet = store.account.get(this.asset.recipientId);
-        const carrier = store.account.get(this.senderId);
+        const packet = await store.account.get(this.asset.packetId);
+        const carrier = await store.account.get(this.senderId);
         /* --- Revert carrier account --- */
-        const carrierBalanceWithSecurity = new utils.BigNum(carrier.balance).add(
-            new utils.BigNum(packet.assset.security)
-        );
-        const updatedCarrier = {
-            ...carrier,
-            balance: carrierBalanceWithSecurity.toString()
-        };
-        store.account.set(carrier.address, updatedCarrier);
+        carrier.balance = carrier.balance + BigInt(packet.asset.security);
+
+        store.account.set(carrier.address, carrier);
         /* --- Revert packet account --- */
-        const updatedData = {
-            asset: {
-                deliveryStatus: "pending",
-                carrier: null
-            }
+        packet.asset = {
+            deliveryStatus: "pending",
+            carrier: null
         };
-        const newObj = {
-            ...packet,
-            ...updatedData
-        };
-        store.account.set(packet.address, newObj);
+        store.account.set(packet.address, packet);
         return errors;
     }
 

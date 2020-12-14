@@ -1,0 +1,15 @@
+extends index.pug
+
+block content
+    if iserror
+      h2 Error
+    else
+      h2 Info
+    
+    pre
+        p #{message}
+
+    if false!==returnpage
+      button.btn.btn-warning(onclick= ' window.location.href = "' + returnpage + '";') Back
+        
+      
